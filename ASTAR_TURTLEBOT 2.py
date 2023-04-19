@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import math
 from copy import deepcopy
 import math as m
+from random import randint
 
 # start_time = time.time()
 
@@ -213,7 +214,7 @@ def nodes_explored_discrete():
     return exploredcost
                 
                 
-def duplicate_checker(current_node, visited_nodes):
+def duplicate_checker(current_node, visited_nodes): # use this function everytime we loop through robot Astar to see if there is a duplicate node
     
     duplicate_nodes = False
     
@@ -285,16 +286,16 @@ def obstacle_checker(node, clearance, radius):
     # offset = clearance + radius
     
 
-    if ( x - 400)**2 + ( y - 90 )**2 <= 50**2 <= 0: 
+    if ( x - 400)**2 + ( y - 90 )**2 <= 50**2 <= 0: # circle
         IsPresent = True
             
-    if (x > 150 + c) and (x < 165 + c) and (y < 125 + c) and (y > 0):     
+    if (x > 150 - c) and (x < 165 + c) and (y > 75 - c) and (y < 200): # left rectangle
         IsPresent = True
 
-    if (x > 210 + c) and (x < 225 + c) and (y < 125 + c) and (y > 0):       
+    if (x > 250 - c) and (x < 265 + c) and (y < 125 + c) and (y > 0): # right rectangle
         IsPresent = True
         
-    if (0 < (5-x)) or (0 > (595-x)) or (0 < (5-y)) or (0 > (195-y)):
+    if (x <= 5 + c) or (x >= 595 - c) or (y <= 5 + c) or (y >= 195 - c): # boundaries
         
         IsPresent = True
         
@@ -323,7 +324,7 @@ def newValidNodeChecker(current_node, clearance, radius):
 
 
 
-def Nodes_per_Action(node, lwheel,rwheel):
+def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj_coord to generate children of give node
     
     posX = float(node[0])
     posY = float(node[1])
@@ -351,7 +352,7 @@ def Nodes_per_Action(node, lwheel,rwheel):
         
         nearest_nodes.append((round(posXn,3), round(posYn,3), round(thetan), move[0], move[1], round(curvature,3)))
         
-    return nearest_nodes
+    return nearest_nodes # return list of tuples
 
 
 def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius, RPM1, RPM2):
@@ -493,8 +494,29 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             cost2come[c_indx] = cost2come_updated #G
             cost[c_indx] = cost2come[c_indx] + cost2go_updated # F = G + H
             Childs_n_Parent.append((current_node, new_pos_node))
+
+def random_sample(clearance, radius):
+
+    state = False
+
+    while state == False:
+        randomX = randint(0, width)
+        randomY = randint(0, height)
+        # robot_traj_coor(float(parentNode[0], float(parentNode[1]), float(parentNode[2]), ))
+        randomNode = (randomX, randomY, randint(0, 360), 0, 0, 0)
+        state = newValidNodeChecker(randomNode, clearance, radius)
+    print("randomNode: ", randomNode)
+    
+    return randomNode
+
+# tree = {}
+# def rrt(parent_node, neighbor_nodes):
+
+#     for neighbor in neighbor_nodes:
+#         tree[neighbor] = parent_node
         
- 
+
+#     return
         
  
 def Path_BackTracking(start, goal_bnds, explored_path):
@@ -586,8 +608,10 @@ def Simulated_BotShow(nodes):
 goal_radius = 0.5
 
 
-        
+
+
 start, goal, RPM1, RPM2, R, map_c = user_goals()
+
 
 start = tuple(start)
 goal = tuple(goal)
