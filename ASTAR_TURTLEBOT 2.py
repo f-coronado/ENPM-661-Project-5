@@ -127,10 +127,6 @@ threshold = 0.5
 # # Test Inputs Starts/Goal
 
 
-
-
-
-
 # New Code Implementation ***********************
 
 
@@ -140,7 +136,6 @@ def euclidean_dist(xi, yi, xf, yf):
     e_dist = m.sqrt((xf - xi)**2 + (yf - yi)**2)
     
     return e_dist
-
 
 
 def robot_traj_coor(x_init,y_init, theta, vL, vR):
@@ -192,8 +187,8 @@ def nodes_visited():
     
     already_visited = {}
     
-    for x in np.arange(0,height,1)/0.6:
-        for y in np.arange(0,width,1)/0.6:
+    for x in np.arange(0,width,1)/0.6: # is this right? should it be width instead of height bc this is x? .6 is a threshold, were scaling up bc this is in cm
+        for y in np.arange(0,height,1)/0.6:
             for theta in np.arange(0,120,10)/10:
                 
                 already_visited[x,y,theta] = 0
@@ -201,16 +196,16 @@ def nodes_visited():
     return already_visited
 
 
-def nodes_explored_discrete():
+def nodes_explored_discrete(): # used to store..?, what's the difference between this and the function above?
     
     exploredcost = {}
     
-    for x in np.arange(0,height,1)/0.6:
-        for y in np.arange(0,width,1)/0.6:
+    for x in np.arange(0,width,1)/0.6: # is this right? should it be width instead of height bc this is x?
+        for y in np.arange(0,height,1)/0.6:
             for theta in np.arange(0,120,10)/10:
                 
                 exploredcost[x,y,theta] = 0
-            
+
     return exploredcost
                 
                 
@@ -222,15 +217,14 @@ def duplicate_checker(current_node, visited_nodes): # use this function everytim
         
         if visited_nodes[current_node] == 1:
             
-            duplicate_nodes = True
+            duplicate_nodes = True # if the current_node is in visited_nodes, return True for duplicate_nodes
             
         else:
             
-            visited_nodes[current_node] = 1
-            
+            visited_nodes[current_node] = 1 # if the current_node is not in visited_nodes, assign the key current_node in the dictionary visited_nodes
+                                            # so next time we call this fn, it will return True for duplicate_nodes
             
     return duplicate_nodes
-
 
 def roundUp(node):
     
@@ -246,17 +240,7 @@ def roundUp(node):
     
     return round_n
 
-
-
-
-
-
-
 # End of New Code Implementation ***********************
-
-
-
-
 
 def Heuristic_Distance(current_node, proximity_node):
     
@@ -266,11 +250,6 @@ def Heuristic_Distance(current_node, proximity_node):
     
     return euclidean_dist
 
-
-
-
-
-    
 def obstacle_checker(node, clearance, radius):
     
     IsPresent = False
@@ -301,9 +280,6 @@ def obstacle_checker(node, clearance, radius):
         
     return IsPresent
             
-
-
-
 def newValidNodeChecker(current_node, clearance, radius):
     
     valid = False
@@ -321,8 +297,6 @@ def newValidNodeChecker(current_node, clearance, radius):
         valid = True
         
     return valid
-
-
 
 def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj_coord to generate children of give node
     
@@ -354,60 +328,46 @@ def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj
         
     return nearest_nodes # return list of tuples
 
-
 def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius, RPM1, RPM2):
+    # start_pos = [x, y, theta]
     
     node_goal_bnds = (0,0,0) # the bounds of the node to goal node
     
-    
-
     Childs_n_Parent = []
  
-    duplicates[start_pos] = 1
+    duplicates[start_pos] = 1 # assign the starting position a value of 1 to show it has been checked
     
     explored_cost = nodes_explored_discrete()
-    explored_cost[start_pos] = 0
+    explored_cost[start_pos] = 0 # assign the starting node a c2c of 0
     
     cost2come = {start_pos:0} # G
     cost2go = {start_pos: Heuristic_Distance(start_pos, goal_pos)} # H
     cost = {start_pos: Heuristic_Distance(start_pos, goal_pos)} # F
     
     
-    open_path = (cost[start_pos], start_pos)
+    open_path = (cost[start_pos], start_pos) # (distance2goal, [x, y, theta])
     
     open_list = PriorityQueue()
     closed_list = set()
     
-    store_OL = set([start_pos])
+    store_OL = set([start_pos]) # start_pos = [x, y, theta]
     exploredPath = {}
 
 
     previous_visited = []
     open_list.put(open_path)
-    Parent = {} # contains an adjacency map of all nodes
-
-    
+    Parent = {} # contains an adjacent map of all nodes
     current_child_nodes = {}
-    
-
     
     # Open list created just for Storing the Queue Values
     
-
-    
     iterations = 0
-    
-    
-    
+        
     while len(store_OL) > 0:
         
         current_node = None # node with lowest f() is found
-        
         neighbor_nodes = []
- 
-        
         cost_current = None
-        
         
         for node in store_OL:
             
@@ -419,11 +379,8 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
                 cost_current = cost[pos_index]
                 current_node = node
             
-        
         rnd_curNode = roundUp(current_node)	  
         rnd_curCost =  float(explored_cost[rnd_curNode])
-        
-        
         
         if iterations > 0:
             
@@ -434,21 +391,28 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             
         
         
-        
         if Heuristic_Distance(current_node, goal_pos) <= goal_radius:
             
             node_goal_bnds = current_node
            
-            print("Goal is Reached", iterations)
-            
-            return current_child_nodes, node_goal_bnds, previous_visited
+            print(" Goal is Reached", iterations)
+            # print(" type(current_child_nodes): ", type(current_child_nodes), "\n current_child_nodes: ", current_child_nodes)
+            # print(" type(explored_cost): ", type(explored_cost), "len(explored_cost)", len(explored_cost)) # \n explored_cost: ", explored_cost)
+            # print("closed_list: ", closed_list)
+            # print("\nstore_OL: ", store_OL)
+            # print("\nopen_list: ", open_list)
+            # print("\nclosed_list: ", closed_list)
+            # print("\nexplored_cost: ", explored_cost)
 
+            return current_child_nodes, node_goal_bnds, previous_visited
 
         store_OL.remove(current_node)
         closed_list.add(current_node)
         
-        neighbor_nodes = Nodes_per_Action(current_node, RPM1, RPM2) # Robot Moves
+        # find_closest_neighbors(explored_cost, (20, 20, 30), 5) # probalistic method for generating search graph
+        neighbor_nodes = Nodes_per_Action(current_node, RPM1, RPM2) # Robot Moves, create children, action based method for generating the search graph
         
+        #             (x, y, theta)
         cur_index = (current_node[0], current_node[1], current_node[2])
 
         iterations = iterations + 1
@@ -456,14 +420,10 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
         for new_pos_node in neighbor_nodes:
             
             if newValidNodeChecker(new_pos_node, clearance, radius) == False:
-                
-                continue
-
-    
+                continue # if the new child is in the obstacle space, exit the for loop
+   
             if new_pos_node in closed_list:
-                
-                continue
-
+                continue # if the new childs location has been explored before, exit the for loop
      
             new_node_created = roundUp(new_pos_node)
             
@@ -482,7 +442,7 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
                 
             elif cost2come_updated >= explored_cost[new_node_created]:
                 
-                continue
+                continue # if the new C2C > OG C2C, exit the for loop
             
             explored_cost[new_node_created] = rnd_newCost
             
@@ -505,16 +465,32 @@ def random_sample(clearance, radius):
         # robot_traj_coor(float(parentNode[0], float(parentNode[1]), float(parentNode[2]), ))
         randomNode = (randomX, randomY, randint(0, 360), 0, 0, 0)
         state = newValidNodeChecker(randomNode, clearance, radius)
-    print("randomNode: ", randomNode)
+    # print("randomNode: ", randomNode)
     
     return randomNode
+
+def find_closest_neighbors(explored_cost, current_node, threshold):
+    
+    nodesWithinDistance = []
+    x1 = current_node[0]
+    y1 = current_node[1]
+
+    for key in explored_cost.keys():
+        x2, y2, _ = key
+        distance = euclidean_dist(x1, y1, x2, y2)
+
+        if distance < threshold:
+            nodesWithinDistance.append((round(x2, 2), round(y2, 2), _))
+
+    # print(" distance Threshold is: ", threshold, " nodesWithinDistance: ", nodesWithinDistance)
+    # time.sleep(5)
+    return nodesWithinDistance
 
 # tree = {}
 # def rrt(parent_node, neighbor_nodes):
 
 #     for neighbor in neighbor_nodes:
 #         tree[neighbor] = parent_node
-        
 
 #     return
         
@@ -607,22 +583,18 @@ def Simulated_BotShow(nodes):
 
 goal_radius = 0.5
 
-
-
-
 start, goal, RPM1, RPM2, R, map_c = user_goals()
-
 
 start = tuple(start)
 goal = tuple(goal)
 
 
         
-duplicate_nodes = nodes_visited()
+duplicate_nodes = nodes_visited() # initialize multidimensional array with a value of zero, this will be used to check for duplicate nodes
         
 visited_nodes, node_goal_bnds, nodes_path = Robot_ASTAR(start, goal, goal_radius, duplicate_nodes, R, map_c, RPM1, RPM2)
 
-# print(nodes_path)
+# print("nodes_path: ", nodes_path)
 Obs_space = ObsMap(map_c, R)                                        # Creating an instance of the Obstacle Space Object 
 goal_circ = plt.Circle((goal[0],goal[1]), radius=goal_radius, color='#F0DB4F')    # Drawing a goal threshold area in the map
 Obs_space.ax.add_patch(goal_circ)                            # Adding goal circle drawing to map
