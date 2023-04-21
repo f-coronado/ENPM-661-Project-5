@@ -394,7 +394,7 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
         if Heuristic_Distance(current_node, goal_pos) <= goal_radius:
             
             node_goal_bnds = current_node
-           
+            # print(" explored_cost: ", explored_cost)
             print(" Goal is Reached", iterations)
             # print(" type(current_child_nodes): ", type(current_child_nodes), "\n current_child_nodes: ", current_child_nodes)
             # print(" type(explored_cost): ", type(explored_cost), "len(explored_cost)", len(explored_cost)) # \n explored_cost: ", explored_cost)
@@ -470,21 +470,32 @@ def random_sample(clearance, radius):
     return randomNode
 
 def find_closest_neighbors(explored_cost, current_node, threshold):
+    # explored_cost is a dictionary
     
-    nodesWithinDistance = []
+    nodesWithinDistance = {}
     x1 = current_node[0]
     y1 = current_node[1]
+
+    # print(" explored_cost: ", explored_cost)
 
     for key in explored_cost.keys():
         x2, y2, _ = key
         distance = euclidean_dist(x1, y1, x2, y2)
 
         if distance < threshold:
-            nodesWithinDistance.append((round(x2, 2), round(y2, 2), _))
+            c2c = explored_cost[key]
+            # nodesWithinDistance.append((round(x2, 2), round(y2, 2), _))
+            nodesWithinDistance[round(x2, 2), round(y2, 2)] = c2c
 
-    # print(" distance Threshold is: ", threshold, " nodesWithinDistance: ", nodesWithinDistance)
+    # print(" distance threshold is: ", threshold, " nodesWithinDistance format: (x, y, theta): c2c", "\n nodesWithinDistance: ", nodesWithinDistance)
     # time.sleep(5)
     return nodesWithinDistance
+
+def choose_parent(current_node, nodesWithinDistance): # the best parent for a new sample within a defined radius is chosen by finding the lowest C2C
+    # need positions of nodeWithinDistance, their parents/index and C2C
+    best_parent = min(nodesWithinDistance, nodesWithinDistance.get()) # find the node in the dictionary with the lowest C2C
+
+    return best_parent, current_node
 
 # tree = {}
 # def rrt(parent_node, neighbor_nodes):
