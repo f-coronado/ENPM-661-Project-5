@@ -337,7 +337,7 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
  
     duplicates[start_pos] = 1 # assign the starting position a value of 1 to show it has been checked
     
-    explored_cost = nodes_explored_discrete()
+    explored_cost = nodes_explored_discrete() # create a dictionary for every node in the workspace, they're all assigned a cost of zero initially
     explored_cost[start_pos] = 0 # assign the starting node a c2c of 0
     
     cost2come = {start_pos:0} # G
@@ -355,9 +355,9 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
 
 
     previous_visited = []
-    open_list.put(open_path)
+    open_list.put(open_path) # (cost, (x, y, theta))
     Parent = {} # contains an adjacent map of all nodes
-    current_child_nodes = {}
+    current_child_nodes = {start_pos: None}
     
     # Open list created just for Storing the Queue Values
     
@@ -371,12 +371,12 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
         
         for node in store_OL:
             
-            H = Heuristic_Distance(node, goal_pos)
-            pos_index = (node[0], node[1], node[2])
+            H = Heuristic_Distance(node, goal_pos) # C2G
+            pos_index = (node[0], node[1], node[2]) # (x, y, theta)
             
-            if current_node is None or cost[pos_index] + H*1.35 < cost_current:
+            if current_node is None or cost[pos_index] + H*1.35 < cost_current: # i dont get this?
                 
-                cost_current = cost[pos_index]
+                cost_current = cost[pos_index] # get the current cost using the pos_index key, we updat the cost dictionary in the 2nd to last line of this func
                 current_node = node
             
         rnd_curNode = roundUp(current_node)	  
@@ -389,7 +389,6 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             Parent = Parent_node[0][0]
             previous_visited.append((Parent, current_node))
             
-        
         
         if Heuristic_Distance(current_node, goal_pos) <= goal_radius:
             
@@ -506,20 +505,24 @@ def choose_parent(current_node, nodesWithinDistance): # the best parent for a ne
 #     return
         
  
-def Path_BackTracking(start, goal_bnds, explored_path):
-    
-    node_path = []
-    goal_set = goal_bnds
-    node_path.append(goal_set)
-    
-    while goal_set != start:
-        
-        node_path.append(explored_path[goal_set])
-        goal_set = explored_path[goal_set]
-        
-    node_path.reverse()
-    
-    return node_path
+def backtrack(visited_nodes):
+    goal_node = list(visited_nodes.keys())[-1] # get the last key in the dictionary bc its the goal node
+    parent_node = visited_nodes[goal_node] # get the value of the last key, this is the last keys parent node
+    path = [goal_node]
+
+    while parent_node is not None: # backtrack using the parent nodes until value = none which means we're at the starting node
+        path.append(parent_node) # add the node to the path each iteration
+        parent_node = visited_nodes[parent_node] # update the parent node
+
+    path.reverse()
+
+    x_coords = [node[0] for node in path]
+    y_coords = [node[1] for node in path]
+    # print("x_coords: ", x_coords)
+    # print("y_coords: ", y_coords)
+
+    return x_coords, y_coords
+
 
 
 
@@ -565,33 +568,52 @@ def Curved_Line_Robot(nodePar, nodeCh, linecolor):
 
 
 
-def bufImage():
-    Obs_space.fig.canvas.draw()
+def bufImage(): # convert a matplotlib figure to an opencv object
+    Obs_space.fig.canvas.draw() # 
     mapImg = np.frombuffer(Obs_space.fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(Obs_space.fig.canvas.get_width_height()[::-1] + (3,))
     mapImg = cv2.cvtColor(mapImg,cv2.COLOR_RGB2BGR)
     return mapImg
 
 
 
-def Simulated_BotShow(nodes):
+def Simulated_BotShow(nodes, xCoords, yCoords):
     
-    print("The Simulation has Started")
+    print(" The Simulation has Started")
+    # print(" nodes: ", nodes)
     
     for node in nodes:
         
         Curved_Line_Robot(node[0], node[1], "orange")
         mapImg = bufImage()
-        
+
+
         if cv2.waitKey(1) == ord('q'):
             
             exit()
-            
         cv2.imshow('Robot - A Star', mapImg)
         
+    
+    # xList = []
+    # xList = []
+
+    # for coordinates in nodes:
+    #     x = node[1][0]
+    #     y = node[1][1]
+    #     xList.append(x)
+    #     xList.append(y)
+    
+    # print("plotting path")
+    # plt.plot(xCoords, yCoords, c = 'blue', marker = 'x')
+    # mapImg = bufImage()
+    # print("plotted path")
+    # # cv2.imshow('Robot - A Star', mapImg)
+
+
+    # if cv2.waitKey(1) == ord('q'):
         
+    #     exit()
 
-
-
+            
 goal_radius = 0.5
 
 start, goal, RPM1, RPM2, R, map_c = user_goals()
@@ -604,6 +626,9 @@ goal = tuple(goal)
 duplicate_nodes = nodes_visited() # initialize multidimensional array with a value of zero, this will be used to check for duplicate nodes
         
 visited_nodes, node_goal_bnds, nodes_path = Robot_ASTAR(start, goal, goal_radius, duplicate_nodes, R, map_c, RPM1, RPM2)
+# i think we can use visited_nodes / current_child_nodes to backtrack
+xCoords, yCoords = backtrack(visited_nodes)
+
 
 # print("nodes_path: ", nodes_path)
 Obs_space = ObsMap(map_c, R)                                        # Creating an instance of the Obstacle Space Object 
@@ -613,7 +638,7 @@ goal_circ = plt.Circle((start[0],start[1]), radius=0.1, color='#333399')    # Dr
 Obs_space.ax.add_patch(goal_circ)   
 
 
-Simulated_BotShow(nodes_path)
+Simulated_BotShow(nodes_path, xCoords, yCoords)
 
 
 if cv2.waitKey(0):
