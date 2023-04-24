@@ -591,27 +591,12 @@ def Simulated_BotShow(nodes, xCoords, yCoords):
             
             exit()
         cv2.imshow('Robot - A Star', mapImg)
-        
-    
-    # xList = []
-    # xList = []
 
-    # for coordinates in nodes:
-    #     x = node[1][0]
-    #     y = node[1][1]
-    #     xList.append(x)
-    #     xList.append(y)
-    
-    # print("plotting path")
-    # plt.plot(xCoords, yCoords, c = 'blue', marker = 'x')
-    # mapImg = bufImage()
-    # print("plotted path")
-    # # cv2.imshow('Robot - A Star', mapImg)
+    plt.plot(xCoords, yCoords, c='blue', marker = '.')
+    mapImg = bufImage()
+    cv2.imshow('Robot - A Star', mapImg)
 
 
-    # if cv2.waitKey(1) == ord('q'):
-        
-    #     exit()
 
             
 goal_radius = 0.5
