@@ -7,6 +7,7 @@ import math
 from copy import deepcopy
 import math as m
 from random import randint
+from scipy.optimize import curve_fit
 
 # start_time = time.time()
 
@@ -70,10 +71,10 @@ def user_goals():
     goal_positions = []
 
     if int(input(" enter 1 for predefined, 2 to define yourself : ")) == 1:
-        start_positions = [5.0, 5.0, 30.0]
-        goal_positions = [80.0, 80.0, 30.0]
-        speed1 = 5.0
-        speed2 = 15.0
+        start_positions = [5.0, 5.0, 45.0]
+        goal_positions = [20.0, 20.0, 45.0]
+        speed1 = 35
+        speed2 = 30
         Robot_Radius = 8.0
         Map_C = 0.6
         print(" Start Position : ", start_positions, "\n Goal Position : ", goal_positions)
@@ -139,6 +140,7 @@ def euclidean_dist(xi, yi, xf, yf):
 
 
 def robot_traj_coor(x_init,y_init, theta, vL, vR):
+    # print("\n************robot_traj_coor*************")
     
     t_init = 0
     R_tire = 0.38
@@ -147,10 +149,16 @@ def robot_traj_coor(x_init,y_init, theta, vL, vR):
     
     xn = x_init
     yn = y_init
+
+    # print("x_init: ", x_init, "y_init: ", y_init)
     
     theta_rad = 3.14 * theta / 180
     
     curvature = 0
+
+    x_list = [x_init]
+    y_list = [y_init]
+    
     
     while t_init < 1:
         
@@ -164,7 +172,8 @@ def robot_traj_coor(x_init,y_init, theta, vL, vR):
         xn += (R_tire / 2) * (vL + vR) * m.cos(theta_rad)* t_delta
         yn += (R_tire / 2) * (vL + vR) * m.sin(theta_rad)* t_delta
         theta_rad += (R_tire / length) * (vR - vL) * t_delta
-        
+        # x_list.append(xn)
+        # y_list.append(yn)
 
         curvature += euclidean_dist(x_s, y_s, xn, yn)
         
@@ -180,7 +189,12 @@ def robot_traj_coor(x_init,y_init, theta, vL, vR):
         
         theta_deg = (theta_deg + 360)
         
-    return xn, yn, theta_deg, curvature
+        # curvature influences x and y. curvature = x0 + xi+n 
+    
+    
+    # print("xn, yn: ", xn, yn)
+    # print("************robot_traj_coor*************\n")
+    return xn, yn, theta_deg, curvature, x_list, y_list
 
 
 def nodes_visited():
@@ -322,7 +336,7 @@ def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj
     
     for move in actions:
         
-        posXn, posYn, thetan, curvature = robot_traj_coor(posX, posY, theta, move[0], move[1])
+        posXn, posYn, thetan, curvature, xList, yList = robot_traj_coor(posX, posY, theta, move[0], move[1])
         
         nearest_nodes.append((round(posXn,3), round(posYn,3), round(thetan), move[0], move[1], round(curvature,3)))
         
@@ -339,6 +353,7 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
     
     explored_cost = nodes_explored_discrete() # create a dictionary for every node in the workspace, they're all assigned a cost of zero initially
     explored_cost[start_pos] = 0 # assign the starting node a c2c of 0
+    # 
     
     cost2come = {start_pos:0} # G
     cost2go = {start_pos: Heuristic_Distance(start_pos, goal_pos)} # H
@@ -374,7 +389,7 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             H = Heuristic_Distance(node, goal_pos) # C2G
             pos_index = (node[0], node[1], node[2]) # (x, y, theta)
             
-            if current_node is None or cost[pos_index] + H*1.35 < cost_current: # i dont get this?
+            if current_node is None or cost[pos_index] + H*1.35 < cost_current: # weighted a star search
                 
                 cost_current = cost[pos_index] # get the current cost using the pos_index key, we updat the cost dictionary in the 2nd to last line of this func
                 current_node = node
@@ -420,10 +435,10 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             
             if newValidNodeChecker(new_pos_node, clearance, radius) == False:
                 continue # if the new child is in the obstacle space, exit the for loop
-   
+
             if new_pos_node in closed_list:
                 continue # if the new childs location has been explored before, exit the for loop
-     
+
             new_node_created = roundUp(new_pos_node)
             
             cost2come_updated = cost2come[cur_index] + new_pos_node[5]
@@ -451,58 +466,216 @@ def Robot_ASTAR(start_pos, goal_pos, goal_radius, duplicates, clearance, radius,
             c_indx = (new_pos_node[0], new_pos_node[1], new_pos_node[2])
             cost2go_updated = Heuristic_Distance(new_pos_node, goal_pos) #H
             cost2come[c_indx] = cost2come_updated #G
-            cost[c_indx] = cost2come[c_indx] + cost2go_updated # F = G + H
+            cost[c_indx] = cost2come[c_indx] + cost2go_updated # F = G + H = total cost
             Childs_n_Parent.append((current_node, new_pos_node))
 
 def random_sample(clearance, radius):
 
-    state = False
+    width = 600
+    height = 200
 
+    state = False
     while state == False:
-        randomX = randint(0, width)
-        randomY = randint(0, height)
-        # robot_traj_coor(float(parentNode[0], float(parentNode[1]), float(parentNode[2]), ))
-        randomNode = (randomX, randomY, randint(0, 360), 0, 0, 0)
-        state = newValidNodeChecker(randomNode, clearance, radius)
-    # print("randomNode: ", randomNode)
+        randomNode = (randint(0, width), randint(0, height), randint(0, 360), 0, 0, 0)
+        # if newValidNodeChecker(randomNode, clearance, radius) == True and radius >= euclidean_dist(current_node[0], current_node[1], randomNode[0], randomNode[1]):
+        if newValidNodeChecker(randomNode, clearance, radius) == True:
+            state = True
+    print("\nrandomNode: ", randomNode)
     
     return randomNode
 
-def find_closest_neighbors(explored_cost, current_node, threshold):
-    # explored_cost is a dictionary
-    
-    nodesWithinDistance = {}
-    x1 = current_node[0]
-    y1 = current_node[1]
+def find_closest_neighbors(tree, sample):
+    # explored_cost is a dictionary. we use the threshold to define the radius
+    print("\n*******find_closest_neighbors to sample*******")
+    print("using tree: ", tree)
+    print("with sample: ", sample)
 
-    # print(" explored_cost: ", explored_cost)
+    nodesWithinDistance = []
+    x1 = sample[0]
+    y1 = sample[1]
 
-    for key in explored_cost.keys():
-        x2, y2, _ = key
-        distance = euclidean_dist(x1, y1, x2, y2)
+    min_distance = float('inf')
+    closest_value = None
 
-        if distance < threshold:
-            c2c = explored_cost[key]
-            # nodesWithinDistance.append((round(x2, 2), round(y2, 2), _))
-            nodesWithinDistance[round(x2, 2), round(y2, 2)] = c2c
+    for key, value in tree.items():
+        if None in key:
+            continue
+        if isinstance(value, list): # check if there are multiple nodes in the key
+            for node in value:
+                x2, y2, th2, rpm1, rpm2, c2c = node
+                distance = euclidean_dist(x1, y1, x2, y2)
+                print("node: ", node, "is at a distance: ", round(distance, 2), "of the sample: ", sample)
 
-    # print(" distance threshold is: ", threshold, " nodesWithinDistance format: (x, y, theta): c2c", "\n nodesWithinDistance: ", nodesWithinDistance)
-    # time.sleep(5)
+                if distance < min_distance:
+                    closest_value = node
+                    min_distance = distance
+        else:
+            x2, y2, th2, rpm1, rpm2, c2c = value
+            distance = euclidean_dist(x1, y1, x2, y2)
+
+            if distance < min_distance:
+                closest_value = value
+                min_distance = distance
+
+    if closest_value is not None:
+        nodesWithinDistance.append(closest_value)
+
+    print("closest node to sample: ", nodesWithinDistance)
+    print("*******find_closest_neighbors*******\n")
     return nodesWithinDistance
 
-def choose_parent(current_node, nodesWithinDistance): # the best parent for a new sample within a defined radius is chosen by finding the lowest C2C
-    # need positions of nodeWithinDistance, their parents/index and C2C
-    best_parent = min(nodesWithinDistance, nodesWithinDistance.get()) # find the node in the dictionary with the lowest C2C
 
-    return best_parent, current_node
 
-# tree = {}
-# def rrt(parent_node, neighbor_nodes):
+def steer(sample, neighbors, ul, ur):
+    # neighbors should be from find_closest_neighbors
+    print("\n*******steer*******")
 
-#     for neighbor in neighbor_nodes:
-#         tree[neighbor] = parent_node
+    new_node_dict = {}
+    # neighbors_and_children = {}
 
-#     return
+    for neighbor in neighbors:
+        neighborChildren = Nodes_per_Action(neighbor, ul, ur)
+        print("neighbor: ", neighbor)
+        for child in neighborChildren:
+            # neighbors_and_children[neighbor] = child
+            # print("child: ", child)
+            x_n, y_n, theta_n, _, _, _ = child
+            distance = euclidean_dist(sample[0], sample[1], x_n, y_n)
+            new_node_dict[(x_n, y_n, theta_n)] = (round(distance, 2), neighbor)
+    # the keys in this dictionary are the children created from all the neighbor nodes, their value is the euclidean distance from the sample
+    # print("neighbors_and_children: ", neighbors_and_children)
+    print("nodes generated from neighbor: ", new_node_dict)
+
+    # x_new = min(new_node_dict.items(), key = lambda x: x[1])
+    # print("x_new: ", x_new)
+    x_new = min(new_node_dict, key = new_node_dict.get) # this is the node we are trying to get to bc it's the closest to the tree
+    print("x_new: ", x_new)
+    x_new_value = new_node_dict[x_new]
+    # print("x_new_value: ", x_new_value)
+    tree_node = x_new_value[1]
+    x_new = (int(x_new[0]), int(x_new[1]), int(x_new[2]))
+    print("x_new after int(): ", x_new)
+    print("tree_node: ", tree_node)
+
+    # path = robot_traj_coor(tree_node[0], tree_node[1], tree_node[2], ul, ur)
+
+    # find action set taken from tree_node to sample
+    RPM1 = ul
+    RPM2 = ur
+    # actions = [[0,RPM1],
+    #             [RPM1,0],
+    #             [RPM1,RPM1],
+    #             [0,RPM2],
+    #             [RPM2,0],
+    #             [RPM2,RPM2],
+    #             [RPM1,RPM2],
+    #             [RPM2,RPM1]]
+    # paths = [] 
+    
+    # for move in actions:
+    #     row = []
+    #     for i in range(len(actions)):
+
+    #         posXn, posYn, thetan, curvature, xList, yList = robot_traj_coor(tree_node[0], tree_node[1], tree_node[2], move[0], move[1])
+    #         row.append((round(posXn,3), round(posYn,3), round(thetan), move[0], move[1], round(curvature,3)))
+    #     paths.append(row)
+        
+    print("*******steer*******\n")
+
+    return x_new    
+
+def near(tree, x_new):
+    
+    print("\n***********near**************")  
+    print("sample: ", x_new)
+    print("tree: ", tree)
+    threshold = 20
+    near_nodes = []
+    
+    for key, value in tree.items():
+        if None in key:
+            continue
+        if isinstance(value, tuple):
+            nodes = [value]
+        else:
+            nodes = value
+        
+        for node in nodes:
+            x2, y2, th2, rpm1, rpm2, c2c = node
+            distance = euclidean_dist(x_new[0], x_new[1], x2, y2)
+            
+            if distance < threshold:
+                near_nodes.append(node)
+
+    print("nodes within threshold of: ", threshold, "to sample: ", x_new, "are: \n", near_nodes)
+    print("***********near**************\n")
+    
+    return near_nodes
+
+
+
+def choose_parent(current_node, near_nodes):
+    
+    print("\n*******choose_parent*******")
+    best_cost = float("inf")
+    best_parent = None
+
+    for node in near_nodes:
+        dist = euclidean_dist(current_node[0], current_node[1], node[1], node[2])
+        total_cost = dist + node[5]
+
+        if total_cost < best_cost:
+            best_cost = total_cost
+            best_parent = node
+    print("best parent for x_new/sample: ", current_node, " is: ", best_parent, "picking this parent gives x_new a c2c of: ", round(best_cost,2))
+    print("*******choose_parent*******\n")
+    
+    return best_parent
+
+def insert_node(tree, parent, child):
+    # this function inserts the child into the tree, also calculates the C2C
+
+    print("\n******insert_node********")
+    parent = (parent[0], parent[1], parent[2], parent[3], parent[4], parent[5])
+
+    if parent in tree:
+        print("parent is already in the tree, adding child to existing parent key")
+        tree[parent].append( [child[0], child[1], child[2], 0, 0, parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1])] )
+    else:
+        print("parent is not in tree, creating new parent key and adding sample as child")
+        parent = (parent[0], parent[1], parent[2], parent[3], parent[4], parent[5])
+        tree[parent] = []
+        tree[parent].append( [child[0], child[1], child[2], 0, 0, parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1])] )
+    print("tree: ", tree)
+    print("******insert_node********\n")
+    
+    return tree
+
+def rrt(start_node, clearance, N, ul, ur):
+    # N is number of samples we want to try?
+    # tree is a dictionary, so is neighbor_nodes
+    # clearance is the same clearance from user_goals
+    tree = {(float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')): start_node}
+# tree[startNode] = sample
+    iteration = 0
+    print("using ", N, "samples")
+
+    for i in range(N):
+        iteration += 1
+        print("************************iteration: ", iteration, "*****************************************")
+        random_node = random_sample(clearance=.6, radius=10) # using clearance from Map_C in user_goals
+        # tree[startNode] = random_node
+        print("tree: ", tree)
+        neighbors = find_closest_neighbors(tree, random_node)
+        x_new = steer(random_node, neighbors, ul, ur)
+        # print("x_new: ", x_new, "is of type: ", type(x_new))
+        
+        if obstacle_checker(x_new, clearance=5, radius = 5):
+            closer_neighbors = near(tree, x_new)
+            z_min = choose_parent(x_new, closer_neighbors)
+            tree = insert_node(tree, z_min, x_new)
+            # rewire function
+    return tree
         
  
 def backtrack(visited_nodes):
@@ -597,8 +770,68 @@ def Simulated_BotShow(nodes, xCoords, yCoords):
     cv2.imshow('Robot - A Star', mapImg)
 
 
+def polynomial(x, *coeffs):
+    y = []
+    for xx in x:
+        y.append(sum([coeffs[i] * xx**i for i in range(len(coeffs))]))
+    return y
 
-            
+def steering(x_data, y_data, current_node, near_node):
+    
+    angle_radians = np.radians(current_node[1])
+    # create a horizontal line at the given angle to be able to flip x_data and y_data over this line
+    # this flipped data will be used to create a lower bound to check if the current_node is above it
+    slope = np.tan(angle_radians)
+    y_int = y_data[0] - slope * x_data[0]
+    x_line = np.linspace(np.min(x_data), np.max(x_data), len(x_data))
+    y_line = slope * x_line + y_int
+
+    x_data_flipped = (x_data + (y_data - 2*y_line) / (slope**2 + 1))
+    # y_data_flipped = (y_line + slope*(x_data + (y_data - 2*y_line) / (slope**2 + 1)))
+    y_data_flipped = (2*y_line - y_data)
+    plt.plot(x_data, y_data, 'o', label = 'Original Data')
+    plt.plot(x_data, y_data_flipped, 'x', label = "flipped data")
+    plt.plot(x_line, y_line, label = 'line at the angle')
+    plt.legend()
+    plt.show()
+    
+    p0 = [1, 1, 1] # used provide initial guess for parameters
+    coeffs, _ = curve_fit(polynomial, x_data, y_data, p0)
+    flipped_coeffs, _ = curve_fit(polynomial, x_data, y_data_flipped, p0)
+    print("coeffs: ", coeffs, "\nequation is: ", coeffs[0], coeffs[1], "x +", coeffs[2], "x**2" )
+    print("flipped_coeffs: ", flipped_coeffs, "\nequation is: ", flipped_coeffs[0], flipped_coeffs[1], "x +", flipped_coeffs[2], "x**2" )
+
+    # the following checks if near_node is within the workspace of the mobile robot, we have to check this bc its a differential drive
+    # if y <= c1 + c2x + c3x^2 and x_data[0] <= x <= x_data[-1]
+    if current_node[1] <= coeffs[0] + coeffs[1] * current_node[0] + coeffs[2] * current_node[0] ** 2 \
+        and current_node [1] >= flipped_coeffs[0] + flipped_coeffs[1] * current_node[0] + flipped_coeffs[2] * current_node[0]**2 \
+        and current_node[0] >= x_data[0] and current_node[0] <= x_data[-1]:
+        print("\ncurrentNode", current_node, "is in bounds")
+        return False
+    else:
+        print("currentNode", current_node, "is out of bounds")
+        return True
+
+
+###################### Testing ######################
+
+print(randint(0, 10))
+
+startNode = (1, 1, 0, 0, 0, 0)
+goalNode = (80, 80, 0, 0, 0, 0)
+# tree = {(float('inf'), float('inf'), float('inf')): start_node}
+# sample = random_sample(startNode, 5, 10)
+# tree[startNode] = sample
+
+# neighbors = find_closest_neighbors(tree, sample)
+# x_new = steer(sample, neighbors, 5, 10)
+
+rrt(startNode, .5, 100, 5, 10)
+
+###################### Testing ######################
+
+
+
 goal_radius = 0.5
 
 start, goal, RPM1, RPM2, R, map_c = user_goals()
@@ -607,7 +840,7 @@ start = tuple(start)
 goal = tuple(goal)
 
 
-        
+
 duplicate_nodes = nodes_visited() # initialize multidimensional array with a value of zero, this will be used to check for duplicate nodes
         
 visited_nodes, node_goal_bnds, nodes_path = Robot_ASTAR(start, goal, goal_radius, duplicate_nodes, R, map_c, RPM1, RPM2)
