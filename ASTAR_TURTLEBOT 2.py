@@ -275,7 +275,10 @@ def obstacle_checker(node, clearance, radius):
     # offset = clearance + radius
     
 
-    if ( x - 400)**2 + ( y - 90 )**2 <= 50**2 <= 0: # circle
+    # if ( x - 400)**2 + ( y - 90 )**2 <= 50**2 <= 0: # circle
+    #     IsPresent = True
+
+    if (x - 400)**2 + (y - 110)**2 - 50**2 <= 0: # circle
         IsPresent = True
             
     if (x > 150 - c) and (x < 165 + c) and (y > 75 - c) and (y < 200): # left rectangle
@@ -474,7 +477,7 @@ def random_sample(clearance, radius):
     
     return randomNode
 
-# returns the closest node on the tree to the sample
+# returns the 1 closest node currently on the tree to the sample
 def find_closest_neighbors(tree, sample):
     print("\n*******find_closest_neighbors to sample*******")
     print("using tree: ", tree)
@@ -514,7 +517,7 @@ def find_closest_neighbors(tree, sample):
     print("*******find_closest_neighbors*******\n")
     return nodesWithinDistance
 
-# steer generates 8 child nodes from neighbor closest to the sample. The child closest to the sample is selected
+# from the 1 neighbor found in function above, 8 child nodes are generated, the child closest to the sample is selected
 # and returned as x_new
 def steer(sample, neighbors, ul, ur):
     # neighbors should be from find_closest_neighbors
@@ -553,9 +556,6 @@ def steer(sample, neighbors, ul, ur):
     RPM1 = ul
     RPM2 = ur
 
-        
-    print("*******steer*******\n")
-
     return x_new    
 
 # this function looks through the tree for any nodes within a defined threshold of x_new
@@ -587,8 +587,8 @@ def near(tree, x_new):
     
     return near_nodes
 
-# this function looks through near_nodes list and chooses the node that will result in the lowest c2c for the current_node
-def choose_parent(current_node, near_nodes, goal_node):
+# this function looks through near_nodes list and chooses the node that can access x_new via one of its 8 action sets
+def choose_parent(current_node, near_nodes, goal_node, ul, ur):
     
     print("\n*******choose_parent*******")
     best_cost = float("inf")
@@ -597,17 +597,23 @@ def choose_parent(current_node, near_nodes, goal_node):
     best_parent = None
 
     for node in near_nodes:
+
+        children = Nodes_per_Action(node, ul, ur)
+        for child in children:
+            if child[0] == current_node[0] and child[1] == current_node[1]:
+                best_parent = node
+
         dist = euclidean_dist(current_node[0], current_node[1], node[0], node[1]) # distance between node in near_nodes and sample
         cost2come = dist + node[5]
         cost2goal = euclidean_dist(node[0], node[1], goal_node[0], goal_node[1])
         total_cost = cost2come + cost2goal
         # print("node in near_nodes: ", node, "has a c2c: ", round(cost2come, 3), "and a c2g: ", round(cost2goal, 3), "which gives a total cost of: ", round(total_cost, 3))
-        print("node: ", node, "is at a distance: ", round(dist, 3), "from the sample: ", current_node)
+        # print("node: ", node, "is at a distance: ", round(dist, 3), "from the sample: ", current_node)
 
-        if best_parent is None or dist < best_cost:
-            best_cost = dist
-            best_parent = node
-            print("updating best_parent to: ", best_parent)
+        # if best_parent is None or dist < best_cost:
+        #     best_cost = dist
+        #     best_parent = node
+        #     print("updating best_parent to: ", best_parent)
 
 
         # if dist <= prev_dist:
@@ -616,7 +622,7 @@ def choose_parent(current_node, near_nodes, goal_node):
         #     print("updating best_parent to: ", best_parent)
 
         # prev_dist = dist
-    print("\nbest parent/z_min for x_new/sample: ", current_node, " is: ", best_parent, "picking this parent gives x_new a total cost of: ", round(best_cost,2))
+    # print("\nbest parent/z_min for x_new/sample: ", current_node, " is: ", best_parent, "picking this parent gives x_new a total cost of: ", round(best_cost,2))
 
         # if total_cost <= best_cost:
         #     best_parent = node
@@ -640,12 +646,12 @@ def insert_node(tree, parent, child):
 
     if parent in tree:
         print("parent is already in the tree, adding child to existing parent key")
-        tree[parent].append( [child[0], child[1], child[2], 0, 0, parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1])] )
+        tree[parent].append( [ child[0], child[1], child[2], 0, 0, parent[5] + round(euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
     else:
         print("parent is not in tree, creating new parent key and adding sample as child")
         parent = (parent[0], parent[1], parent[2], parent[3], parent[4], parent[5])
         tree[parent] = []
-        tree[parent].append( [child[0], child[1], child[2], 0, 0, parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1])] )
+        tree[parent].append( [ child[0], child[1], child[2], 0, 0, round(parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
     print("tree: ", tree)
     print("******insert_node********\n")
     
@@ -666,11 +672,11 @@ def rrt(start_node, clearance, N, ul, ur, goal_node):
         print("tree: ", tree)
         neighbors = find_closest_neighbors(tree, random_node) # find closest neighbor of that sample
         x_new = steer(random_node, neighbors, ul, ur) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
-        
+
         if obstacle_checker(x_new, clearance=5, radius = 5) == False:
             # if x_new is not in the obstacle space then...
             closer_neighbors = near(tree, x_new) # find all neighbors of x_new within a defined threshold
-            z_min = choose_parent(x_new, closer_neighbors, goal_node) # pick the parent, z_min, that gives the smallest C2C to x_new
+            z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur) # pick the node who can reach x_new using 1 of the 8 action sets
             tree = insert_node(tree, z_min, x_new) # insert z_min as the parent, and x_new as the child, into the tree
             print("x_new: ", x_new)
             rpms = (0, 0, 0, x_new[3], x_new[4])
@@ -678,32 +684,50 @@ def rrt(start_node, clearance, N, ul, ur, goal_node):
             plt.plot([x_new[0]], [x_new[1]], '+', label = 'parent')
             Curved_Line_Robot(z_min, rpms, "blue")
             
-            if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 5:
-                print("goal node reached!")
-
+            if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
+                print("tree: ", tree)
+                goal = list(tree.values())[-1]
+                print("goal node: ", goal, "reached in tree above^")
+                # path_list = pathtrace(goal, tree)
+                # print("path taken: ", path_list)
+                # time.sleep(1000)
+                # return tree
                 while True:
                     if plt.waitforbuttonpress():
                         if plt.get_current_fig_manager().toolbar.mode == 'q':
                             plt.close('all')
                             return tree
             
-            # plt.plot([x_new[0]], [x_new[1]], 'x')
-            # plt.plot([z_min[0]], [z_min[1]], 'o')
-
-            # rewire function
-        
         else: 
-            print("x_new is in obstacle space, not inserting!")
+            print("x_new: ", x_new, "is in obstacle space, not inserting!")
 
         plt.draw() # redraw the plot with the new random node
-        plt.pause(.01)
+        plt.pause(.0000000000000001)
+    print("iteration", iteration, "reached")
 
     plt.ioff()
     plt.show()
 
     return tree
 
- 
+
+def pathtrace(goal, tree):
+    path = [goal]
+    current = goal
+    visited = set()
+    while current != (float("inf"), float("inf"), float("inf"), float("inf"), float("inf")):
+        visited.add(tuple(current))  # convert the list to a tuple before adding to set
+        for parent, children in tree.items():
+            if current in children:
+                if tuple(parent) in visited:  # check if the parent has already been visited
+                    return None  # cycle detected, return None
+                path.append(parent)
+                current = parent
+                break
+    return path[::-1]
+
+
+
 def backtrack(visited_nodes):
 
     goal_node = list(visited_nodes.keys())[-1] # get the last key in the dictionary bc its the goal node
@@ -841,10 +865,12 @@ def steering(x_data, y_data, current_node, near_node):
 ###################### Testing ######################
 plt.close('all')
 startNode = (30, 30, 45, 0, 0, 0)
-goalNode = (80, 80, 45, 0, 0, 0)
+# goalNode = (385, 50, 45, 0, 0, 0)
+goalNode = (230, 70, 45, 0, 0, 0)
 
 # rrt ( start_node, clearance, N, ul, ur, goal_node)
-tree = rrt(startNode, 0, 20, 6, 11, goalNode)
+tree = rrt(startNode, 0, 2000, 6, 11, goalNode)
+# print("tree: ", tree)
 
 # create_an_astar(tree, startNode, goalNode, 5, 10, .5, 8)
 
