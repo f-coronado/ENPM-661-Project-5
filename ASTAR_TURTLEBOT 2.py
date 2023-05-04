@@ -837,64 +837,6 @@ def steering(x_data, y_data, current_node, near_node):
         print("currentNode", current_node, "is out of bounds")
         return True
 
-from queue import PriorityQueue
-from math import sqrt
-
-def nodes_to_graph(nodes):
-    graph = {}
-    for node in nodes:
-        parent = node.parent
-        if parent:
-            if parent not in graph:
-                graph[parent] = []
-            graph[parent].append(node)
-            if node not in graph:
-                graph[node] = []
-            graph[node].append(parent)
-    return graph
-
-def heuristic_cost_estimate(start, goal):
-    x1, y1, _, _, _, _ = start
-    x2, y2, _, _, _, _ = goal
-    return sqrt((x1 - x2)**2 + (y1 - y2)**2)
-
-def reconstruct_path(came_from, current):
-    path = [current]
-    while current in came_from:
-        current = came_from[current]
-        path.append(current)
-    return path[::-1]
-
-def create_an_astar(tree, start, goal, ul, ur, clearance, radius):
-    # Convert the dictionary into a graph with edges based on the distance between nodes
-    graph = nodes_to_graph(tree, ul, ur, clearance, radius)
-
-    # Run A* algorithm
-    frontier = PriorityQueue()
-    frontier.put(start, 0)
-    came_from = {}
-    g_score = {node: float('inf') for node in graph}
-    g_score[start] = 0
-    f_score = {node: float('inf') for node in graph}
-    f_score[start] = heuristic_cost_estimate(start, goal)
-    
-    while not frontier.empty():
-        current = frontier.get()
-        if current == goal:
-            return reconstruct_path(came_from, current)
-
-        for neighbor in graph[current]:
-            tentative_g_score = g_score[current] + graph[current][neighbor]
-            if tentative_g_score < g_score[neighbor]:
-                came_from[neighbor] = current
-                g_score[neighbor] = tentative_g_score
-                f_score[neighbor] = tentative_g_score + heuristic_cost_estimate(neighbor, goal)
-                if neighbor not in frontier.queue:
-                    frontier.put(neighbor, f_score[neighbor])
-    
-    return None
-
-
 
 ###################### Testing ######################
 plt.close('all')
