@@ -1,4 +1,4 @@
-import cv2
+# import cv2
 import numpy as np
 from queue import PriorityQueue
 import time
@@ -13,6 +13,13 @@ from scipy.optimize import curve_fit
 
 
 from matplotlib.patches import Circle, Rectangle
+
+
+
+class Node:
+    
+    def __init__
+
 
 
 
@@ -741,33 +748,33 @@ def Curved_Line_Robot(nodePar, nodeCh, linecolor):
 
 
 
-def bufImage(): # convert a matplotlib figure to an opencv object
-    Obs_space.fig.canvas.draw() # 
-    mapImg = np.frombuffer(Obs_space.fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(Obs_space.fig.canvas.get_width_height()[::-1] + (3,))
-    mapImg = cv2.cvtColor(mapImg,cv2.COLOR_RGB2BGR)
-    return mapImg
+# def bufImage(): # convert a matplotlib figure to an opencv object
+#     Obs_space.fig.canvas.draw() # 
+#     mapImg = np.frombuffer(Obs_space.fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(Obs_space.fig.canvas.get_width_height()[::-1] + (3,))
+#     mapImg = cv2.cvtColor(mapImg,cv2.COLOR_RGB2BGR)
+#     return mapImg
 
 
 
-def Simulated_BotShow(nodes, xCoords, yCoords):
+# def Simulated_BotShow(nodes, xCoords, yCoords):
     
-    print(" The Simulation has Started")
-    # print(" nodes: ", nodes)
+#     print(" The Simulation has Started")
+#     # print(" nodes: ", nodes)
     
-    for node in nodes:
+#     for node in nodes:
         
-        Curved_Line_Robot(node[0], node[1], "orange")
-        mapImg = bufImage()
+#         Curved_Line_Robot(node[0], node[1], "orange")
+#         mapImg = bufImage()
 
 
-        if cv2.waitKey(1) == ord('q'):
+    #     if cv2.waitKey(1) == ord('q'):
             
-            exit()
-        cv2.imshow('Robot - A Star', mapImg)
+    #         exit()
+    #     cv2.imshow('Robot - A Star', mapImg)
 
-    plt.plot(xCoords, yCoords, c='blue', marker = '.')
-    mapImg = bufImage()
-    cv2.imshow('Robot - A Star', mapImg)
+    # plt.plot(xCoords, yCoords, c='blue', marker = '.')
+    # mapImg = bufImage()
+    # cv2.imshow('Robot - A Star', mapImg)
 
 
 def polynomial(x, *coeffs):
@@ -856,13 +863,13 @@ goal_circ = plt.Circle((start[0],start[1]), radius=0.1, color='#333399')    # Dr
 Obs_space.ax.add_patch(goal_circ)   
 
 
-Simulated_BotShow(nodes_path, xCoords, yCoords)
+# Simulated_BotShow(nodes_path, xCoords, yCoords)
 
 
-if cv2.waitKey(0):
+# if cv2.waitKey(0):
     
-    exit()
+#     exit()
     
-cv2.destroyAllWindows()
+# cv2.destroyAllWindows()
                             
                
