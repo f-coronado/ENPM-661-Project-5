@@ -646,12 +646,12 @@ def insert_node(tree, parent, child):
 
     if parent in tree:
         #print("parent is already in the tree, adding child to existing parent key")
-        tree[parent].append( [ child[0], child[1], child[2], 0, 0, parent[5] + round(euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
+        tree[parent].append( [ child[0], child[1], child[2], child[3], child[4], parent[5] + round(euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
     else:
         #print("parent is not in tree, creating new parent key and adding sample as child")
         parent = (parent[0], parent[1], parent[2], parent[3], parent[4], parent[5])
         tree[parent] = []
-        tree[parent].append( [ child[0], child[1], child[2], 0, 0, round(parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
+        tree[parent].append( [ child[0], child[1], child[2], child[3], child[4], round(parent[5] + euclidean_dist(parent[0], parent[1], child[0], child[1]), 3) ] )
     #print("tree: ", tree)
     #print("******insert_node********\n")
     
@@ -685,14 +685,20 @@ def rrt(start_node, clearance, N, ul, ur, goal_node):
             Curved_Line_Robot(z_min, rpms, "blue")
             
             if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
-                #print("tree: ", tree)
+                print("tree: ", tree)
                 goal = list(tree.values())[-1]
-                print("goal node: ", goal, "reached in tree above^")
+                print("goal node: ", goal, "reached in", iteration, "iterations")
                 path_list = pathtrace(goal, tree, start_node)
                 path_list[-1] = tuple(path_list[-1][0])
-                print("path taken: ", path_list)
-                # time.sleep(1000)
-                # return tree
+
+                # in this loop we shift all the rpms of the current node to the previous node
+                # so path_list can have the correct rpms with Curved_Line_Robot to plot the path from the current to the next node
+                for i in range(1, len(path_list)):
+                    path_list[i-1] = path_list[i-1][:3] + path_list[i][3:5] + path_list[i-1][5:]
+                path_list.pop()
+
+                for node in path_list:
+                    Curved_Line_Robot(node, node, 'red', 1.8)
                 while True:
                     if plt.waitforbuttonpress():
                         if plt.get_current_fig_manager().toolbar.mode == 'q':
@@ -713,38 +719,38 @@ def rrt(start_node, clearance, N, ul, ur, goal_node):
 
 
 def pathtrace(goal, tree, start_node):
-    print("\n***********************pathtrace********************************")
-    print("tree: ", tree)
+    #print("\n***********************pathtrace********************************")
+    #print("tree: ", tree)
     path = [goal] # add the goal node to the path
     current = goal # going to use current to find its key
     visited = set() # add keys explored
-    # print("path: ", path, "is of type: ", type(path))
-    print("current: ", current, "is of type: ", type(current))
-    # print("visited: ", visited, "is of type: ", type(visited))
+    # #print("path: ", path, "is of type: ", type(path))
+    #print("current: ", current, "is of type: ", type(current))
+    # #print("visited: ", visited, "is of type: ", type(visited))
     i = 0
     while current != start_node:
         if i == 0:
             current = current[0] # needed bc the first current (goal) is a nested list
         if i >= 1:
             current = list(current)
-            print("current after list: ", current, type(current))
-        print("current inside while loop: ", current, "is of type: ", type(current))
+            #print("current after list: ", current, type(current))
+        #print("current inside while loop: ", current, "is of type: ", type(current))
         # visited.add(tuple(current))  # add the current node to the visited list
-        # print("visited: ", visited)
+        # #print("visited: ", visited)
         i += 1
         for parent, children in tree.items(): 
             # time.sleep(.05)
-            # print("\n")
+            # #print("\n")
             if current in children:
                 # if current is a value in the tree dictionary, do the following:
-                print("\n", current, "is in", parent, "key")
+                #print("\n", current, "is in", parent, "key")
                 # if tuple(parent) in visited:  # check if the parent has already been visited
                 #     return None  # cycle detected, return None
                 path.append(parent)
-                print("parent: ", parent, "is of type: ", type(parent))
+                #print("parent: ", parent, "is of type: ", type(parent))
                 current = parent
                 break
-    print("***********************pathtrace********************************\n")
+    #print("***********************pathtrace********************************\n")
     return path[::-1]
 
 
@@ -768,7 +774,7 @@ def backtrack(visited_nodes):
     return x_coords, y_coords
 
 
-def Curved_Line_Robot(nodePar, nodeCh, linecolor):
+def Curved_Line_Robot(nodePar, nodeCh, linecolor, linewidth=0.6):
     
     t = 0 
     R = 0.38
@@ -793,7 +799,7 @@ def Curved_Line_Robot(nodePar, nodeCh, linecolor):
         yn += (R / 2) * (UL + UR) * m.sin(theta_rad) * dt
         theta_rad += (R / L) * (UR - UL) * dt
         
-        plt.plot([xs, xn],[ys, yn], color=linecolor, linewidth=0.6)
+        plt.plot([xs, xn],[ys, yn], color=linecolor, linewidth=linewidth)
 
 
 
@@ -885,11 +891,11 @@ def steering(x_data, y_data, current_node, near_node):
 ###################### Testing ######################
 plt.close('all')
 startNode = (30, 30, 45, 0, 0, 0)
-# goalNode = (385, 50, 45, 0, 0, 0)
-goalNode = (60, 60, 45, 0, 0, 0)
+goalNode = (350, 100, 45, 0, 0, 0)
+# goalNode = (60, 60, 45, 0, 0, 0)
 
 # rrt ( start_node, clearance, N, ul, ur, goal_node)
-tree = rrt(startNode, 0, 2000, 6, 11, goalNode)
+tree = rrt(startNode, 0, 2000, 11, 20, goalNode)
 # #print("tree: ", tree)
 
 # create_an_astar(tree, startNode, goalNode, 5, 10, .5, 8)
