@@ -6,7 +6,17 @@ import numpy as np
 import pygame
 import sys
 import time
+import copy
+
 show_animation = True
+
+
+def extract_path(node):
+    
+    node = copy.deepcopy(node)
+    
+    return node
+
 
 
 class RRT:
@@ -45,6 +55,13 @@ class RRT:
         self.goal_sample_rate = goal_sample_rate
         self.max_iter = max_iter
         self.node_list = []
+        
+        
+
+        
+    
+
+    
 
     def planning(self, animation=True):
         """
@@ -83,20 +100,29 @@ class RRT:
                     nearest_ind = self.get_nearest_node_index(self.node_list, rnd_node)
                     nearest_node = self.node_list[nearest_ind]
                     new_node = self.steer(nearest_node, rnd_node, self.expand_dis)
+                    
                 
                     if self.check_collision(new_node):
                         self.node_list.append(new_node)
+                      
 
                         # Drawing the nodes and edges
                         pygame.draw.circle(screen, (0,255,255), (100*new_node.x, 100*10 - 100*new_node.y), 2)
                         pygame.draw.line(screen, (255,255,255), (100*nearest_node.x, 100*10 - 100*nearest_node.y), (100*new_node.x, 100*10 - 100*new_node.y))
 
+                       
+
                     if self.calc_dist_to_goal(self.node_list[-1].x, self.node_list[-1].y) <= self.expand_dis:
+                        
                         print('reached!')
                         final_node = self.steer(self.node_list[-1], self.end, self.expand_dis)
                         
+                        
                         if self.check_collision(final_node):
                             path = self.generate_path(len(self.node_list) - 1)
+                            
+                            copy_path = extract_path(path)
+                            
                     
                     # time.sleep(0.02)
                     pygame.display.update()
@@ -109,8 +135,13 @@ class RRT:
 
                     print("found path!!")
                 pygame.display.update()
+                return copy_path
             
             counter +=1
+            
+        
+            
+        
 
 
     # def steer(self, from_node, to_node, extend_length=float("inf")):
@@ -266,7 +297,22 @@ def main(gx=6.0, gy=10.0):
         goal=[gx, gy],
         rand_area=[0, 100*10],)
     
-    rrt.planning(animation=show_animation)
+    
+    # ------ Use Variables to Change Scales for ROS ------ #
+    
+    sx = 0.6
+    sy = 0.2
+    
+    path = rrt.planning(animation=show_animation)
+    
+    file = open("output_RRT_results.txt", "w+")
+    
+    for x, y in path:
+        
+        file.write(str(round((x * sx), 2)) + ' ' + str(round((y * sy),2)))
+        file.write('\n')
+        
+    file.close()
 
 if __name__ == '__main__':
     main()
