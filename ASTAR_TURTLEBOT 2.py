@@ -1005,7 +1005,7 @@ def prompt():
 
     if option == 1:
         startNode = (30, 30, 45, 0, 0, 0)
-        goalNode = (530, 100, 45, 0, 0, 0)
+        goalNode = (80, 80, 45, 0, 0, 0)
         print(" Using start node:", startNode, "and goal node:", goalNode, "with 2000 samples, RPM1 = 25, RPM2 = 30 and a clearance of 0")
         
         metric_function = -1
@@ -1019,29 +1019,38 @@ def prompt():
                 tree = rrt(startNode, 0, 2000, 25, 30, goalNode, diagonal_dist) # using euclidean distance
 
     if option == 2:
-        start_positions = []
         goal_positions = []
-
-        # gather user input
-        print("\n Please enter values for Start Position [x y theta], e.g [15 15 30]:")
-        for i in range(3):
-            start_positions.append(int(input(" ")))
-        start_positions = tuple(start_positions) + (0, 0, 0)
-
-        print(" Please enter values for the Goal Position [x y theta], e.g [350, 100, 0]:")
-        for i in range(3):
-            goal_positions.append(int(input(" ")))
-        goal_positions = tuple(goal_positions) + (0, 0, 0)
 
         samples = int(input(" Enter the max amount of samples you want to use (at least 1000 is recommended): "))
         clearance = int(input(" Enter your desired obstacle clearace: "))
-        
+
+        # gather user input
+        start_positions = (400, 100, 0, 0, 0, 0)
+        while obstacle_checker(start_positions, clearance, .105) == True:
+            start_positions = []
+            print("\n Please enter values for Start Position [x y theta], e.g [15 15 30]:")
+            for i in range(3):
+
+                start_positions.append(int(input(" ")))
+            start_positions = tuple(start_positions) + (0, 0, 0)
+
+        goal_positions = (400, 100, 0, 0, 0, 0) # initialize goal_positions so we enter the loop
+        while obstacle_checker(goal_positions, clearance, .105) == True:
+            goal_positions = []
+            print(" Please enter values for the Goal Position [x y theta], e.g [350, 100, 0]:")
+            for i in range(3):
+                goal_positions.append(int(input(" ")))
+            goal_positions = tuple(goal_positions) + (0, 0, 0)
+        print("goal_positions: ", goal_positions, "is of type: ", type(goal_positions))
+        print("start_positions: ", start_positions, "is of type: ", type(start_positions))
+
+
         rpmLeft = -1
-        while not (0 < rpmLeft <= 45):
-            rpmLeft = int(input(" Enter your desired RPM1 (between 1 and 45): "))
+        while not (0 < rpmLeft <= 35):
+            rpmLeft = int(input(" Enter your desired RPM1 (between 1 and 35): "))
         rpmRight = -1
-        while not (0 < rpmRight <= 45):
-            rpmRight = int(input(" Enter your desired RPM2 (between 1 and 45): "))
+        while not (0 < rpmRight <= 35):
+            rpmRight = int(input(" Enter your desired RPM2 (between 1 and 35): "))
         print("startNode:", start_positions)
         print("endNode:", goal_positions)
 
