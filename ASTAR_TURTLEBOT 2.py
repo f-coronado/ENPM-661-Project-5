@@ -3,6 +3,7 @@ import numpy as np
 from queue import PriorityQueue
 import time
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle, Circle
 import math
 from copy import deepcopy
 import math as m
@@ -202,15 +203,13 @@ def Heuristic_Distance(current_node, proximity_node):
     
     return euclidean_dist
 
-def obstacle_checker(node, clearance, radius):
+def obstacle_checker(node, c, radius):
     
     IsPresent = False
     
     x = node[0]
     y = node[1]
-    
-    c = 10
-    
+        
     # offset_x= 0
     # offset_y = 0
     
@@ -220,7 +219,7 @@ def obstacle_checker(node, clearance, radius):
     # if ( x - 400)**2 + ( y - 90 )**2 <= 50**2 <= 0: # circle
     #     IsPresent = True
 
-    if (x - 400)**2 + (y - 110)**2 - 50**2 <= 0: # circle
+    if (x - 400)**2 + (y - 110)**2 - (50 + c)**2 <= 0: # circle
         IsPresent = True
             
     if (x > 150 - c) and (x < 165 + c) and (y > 75 - c) and (y < 200): # left rectangle
@@ -263,11 +262,7 @@ def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj
     RPM1 = lwheel
     RPM2 = rwheel
     
-    actions = [[0,RPM1],
-                [RPM1,0],
-                [RPM1,RPM1],
-                [0,RPM2],
-                [RPM2,0],
+    actions = [[RPM1,RPM1],
                 [RPM2,RPM2],
                 [RPM1,RPM2],
                 [RPM2,RPM1]]
@@ -275,7 +270,6 @@ def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj
     for move in actions:
         
         posXn, posYn, thetan, curvature, xList, yList = robot_traj_coor(posX, posY, theta, move[0], move[1])
-        
         nearest_nodes.append((round(posXn,3), round(posYn,3), round(thetan), move[0], move[1], round(curvature,3)))
         
     return nearest_nodes # return list of tuples
@@ -415,7 +409,7 @@ def random_sample(clearance, radius):
         # if newValidNodeChecker(randomNode, clearance, radius) == True and radius >= euclidean_dist(current_node[0], current_node[1], randomNode[0], randomNode[1]):
         if newValidNodeChecker(randomNode, clearance, radius) == True:
             state = True
-    #print("\nrandomNode: ", randomNode)
+    # print("\nrandomNode: ", randomNode)
     
     return randomNode
 
@@ -471,39 +465,45 @@ def find_closest_neighbors(tree, sample, metric_function=euclidean_dist):
 
 # from the 1 neighbor found in function above, 8 child nodes are generated, the child closest to the sample is selected
 # and returned as x_new
-def steer(sample, neighbors, ul, ur, metric_function=euclidean_dist):
+def steer(sample, neighbors, ul, ur, goal_node, metric_function=euclidean_dist):
     # neighbors should be from find_closest_neighbors
-    #print("\n*******steer*******")
+    # print("\n*******steer*******")
 
     new_node_dict = {}
     # neighbors_and_children = {}
 
     for neighbor in neighbors:
         neighborChildren = Nodes_per_Action(neighbor, ul, ur)
-        #print("neighborChildren: ", neighborChildren)
+        # print("neighborChildren: ", neighborChildren)
         neighbor = [neighbor[0], neighbor[1], neighbor[2], neighbor[3], neighbor[4], round(neighbor[5])]
-        #print("neighbor: ", neighbor)
+        # print("neighbor: ", neighbor)
         for child in neighborChildren:
             # neighbors_and_children[neighbor] = child
-            # #print("child: ", child)
+            # print("child: ", child)
             x_n, y_n, theta_n, rpmLeft, rpmRight, curvature = child
             if metric_function == euclidean_dist:
-                distance = euclidean_dist(sample[0], sample[1], x_n, y_n)
+                distance2sample = euclidean_dist(sample[0], sample[1], x_n, y_n)
+                distance2goal = euclidean_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                total_cost = distance2goal + distance2sample
             elif metric_function == manhattan_dist:
-                distance = manhattan_dist(sample[0], sample[1], x_n, y_n)
+                distance2sample = manhattan_dist(sample[0], sample[1], x_n, y_n)
+                distance2goal = manhattan_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                total_cost = distance2goal + distance2sample
             elif metric_function == diagonal_dist:
-                distance = diagonal_dist(sample[0], sample[1], x_n, y_n)
-            new_node_dict[(x_n, y_n, theta_n, rpmLeft, rpmRight)] = (round(distance, 2), neighbor)
+                distance2sample = diagonal_dist(sample[0], sample[1], x_n, y_n)
+                distance2goal = manhattan_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                total_cost = distance2goal + distance2sample
+            new_node_dict[(x_n, y_n, theta_n, rpmLeft, rpmRight)] = (round(distance2sample, 2), round(distance2goal, 2), round(total_cost, 2), neighbor)
     # the keys in this dictionary are the children created from all the neighbor nodes, their value is the euclidean distance from the sample
-    # #print("neighbors_and_children: ", neighbors_and_children)
-    #print("nodes generated from neighbor: ", new_node_dict)
+    # print("neighbors_and_children: ", neighbors_and_children)
+    # print("nodes generated from neighbor: ", new_node_dict)
 
     # x_new = min(new_node_dict.items(), key = lambda x: x[1])
     # #print("x_new: ", x_new)
-    x_new = min(new_node_dict, key = new_node_dict.get) # this is the node we are trying to get to bc it's the closest to the tree
-    #print("x_new: ", x_new)
+    x_new = min(new_node_dict, key = new_node_dict.get) # retrieve the child with the lowest total cost
+    # print("x_new: ", x_new)
     x_new_value = new_node_dict[x_new]
-    # #print("x_new_value: ", x_new_value)
+    # print("x_new_value: ", x_new_value)
     tree_node = x_new_value[1]
     x_new = ((x_new[0]), x_new[1], x_new[2], x_new[3], x_new[4])
     #print("x_new after int(): ", x_new)
@@ -642,7 +642,24 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
     tree = {(float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')): start_node}
     iteration = 0
     #print("using ", N, "samples")
+    walls = Rectangle((0, 0), 600, 200, fill=False, edgecolor='black')
+    circle = Circle((400, 110), radius=50, fc='r', ec='b')
+    circle_clearance = Circle((400, 110), radius=50 + clearance, fc='y', ec='y')
+    rectangle1 = Rectangle((150, 75), width=15, height=125, fc='r', ec='b')
+    rectangle1_clearance = Rectangle((150 - clearance/2, 75 - clearance/2), width=15 + clearance, height=125 + clearance, fc='y', ec='y')
+    rectangle2 = Rectangle((250, 0), width=15, height=125, fc='r', ec='b')
+    rectangle2_clearance = Rectangle((250 - clearance/2, 0 - clearance/2), width=15 + clearance, height=125 + clearance, fc='y', ec='y')
+    plt.gca().add_patch(walls)
+    plt.gca().add_patch(rectangle1_clearance)
+    plt.gca().add_patch(rectangle2_clearance)
+    plt.gca().add_patch(circle_clearance)
+    plt.gca().add_patch(rectangle1)
+    plt.gca().add_patch(rectangle2)
+    plt.gca().add_patch(circle)
+
+
     plt.ion() # so we can visualize the tree being created
+
 
     if metric_function == euclidean_dist:
         print(" using euclidean distance as metric function")
@@ -652,17 +669,20 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
             random_node = random_sample(clearance=.6, radius=10) # create random sample
             #print("tree: ", tree)
             neighbors = find_closest_neighbors(tree, random_node) # find closest neighbor of that sample
-            x_new = steer(random_node, neighbors, ul, ur) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
+            # print("nearest_neighbor:", neighbors)
+            # total_cost = neighbors[0][5] + euclidean_dist(neighbors[0][0], neighbors[0][1], goal_node[0], goal_node[1])
+            # print("total_cost: ",total_cost)
+            x_new = steer(random_node, neighbors, ul, ur, goal_node) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
 
-            if obstacle_checker(x_new, clearance=5, radius = 5) == False:
+            if obstacle_checker(x_new, clearance, radius = 5) == False:
                 # if x_new is not in the obstacle space then...
                 closer_neighbors = near(tree, x_new) # find all neighbors of x_new within a defined threshold
                 z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur) # pick the node who can reach x_new using 1 of the 8 action sets
                 tree = insert_node(tree, z_min, x_new) # insert z_min as the parent, and x_new as the child, into the tree
                 #print("x_new: ", x_new)
                 rpms = (0, 0, 0, x_new[3], x_new[4])
-                plt.plot([z_min[0]], [z_min[1]], 'x', label = 'child')
-                plt.plot([x_new[0]], [x_new[1]], '+', label = 'parent')
+                plt.plot([z_min[0]], [z_min[1]], ',', label = 'child')
+                plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
                 if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
@@ -671,7 +691,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                     time_taken = time_end - time_start
 
                     goal = list(tree.values())[-1]
-                    print("goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
+                    print(" goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
                     path_list = pathtrace(goal, tree, start_node)
                     path_list[-1] = tuple(path_list[-1][0])
 
@@ -682,7 +702,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                     path_list.pop()
 
                     for node in path_list:
-                        Curved_Line_Robot(node, node, 'red', 1.8)
+                        Curved_Line_Robot(node, node, 'green', 1.8)
                     while True:
                         if plt.waitforbuttonpress():
                             if plt.get_current_fig_manager().toolbar.mode == 'q':
@@ -690,7 +710,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                                 return tree
 
             plt.draw() # redraw the plot with the new random node
-            plt.pause(.0000000000000001)
+            # plt.pause(.0000000000000001)
 
     elif metric_function == manhattan_dist:
         print(" using manhattan distance as metric function")
@@ -700,17 +720,17 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
             random_node = random_sample(clearance=.6, radius=10) # create random sample
             #print("tree: ", tree)
             neighbors = find_closest_neighbors(tree, random_node, metric_function=manhattan_dist) # find closest neighbor of that sample
-            x_new = steer(random_node, neighbors, ul, ur, manhattan_dist) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
+            x_new = steer(random_node, neighbors, ul, ur, goal_node, manhattan_dist) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
 
-            if obstacle_checker(x_new, clearance=5, radius = 5) == False:
+            if obstacle_checker(x_new, clearance, radius = 5) == False:
                 # if x_new is not in the obstacle space then...
                 closer_neighbors = near(tree, x_new, manhattan_dist) # find all neighbors of x_new within a defined threshold
                 z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur, manhattan_dist) # pick the node who can reach x_new using 1 of the 8 action sets
                 tree = insert_node(tree, z_min, x_new, manhattan_dist) # insert z_min as the parent, and x_new as the child, into the tree
                 #print("x_new: ", x_new)
                 rpms = (0, 0, 0, x_new[3], x_new[4])
-                plt.plot([z_min[0]], [z_min[1]], 'x', label = 'child')
-                plt.plot([x_new[0]], [x_new[1]], '+', label = 'parent')
+                plt.plot([z_min[0]], [z_min[1]], ',', label = 'child')
+                plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
                 if manhattan_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
@@ -719,7 +739,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                     time_taken = time_end - time_start
 
                     goal = list(tree.values())[-1]
-                    print("goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
+                    print(" goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
                     path_list = pathtrace(goal, tree, start_node)
                     path_list[-1] = tuple(path_list[-1][0])
 
@@ -737,27 +757,27 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                                 plt.close('all')
                                 return tree
             plt.draw() # redraw the plot with the new random node
-            plt.pause(.0000000000000001)
-                            
+            # plt.pause(.0000000000000001)
+
     elif metric_function == diagonal_dist:
-        print("using diagonal distance as metric function")
+        print(" using diagonal distance as metric function")
         for i in range(N):
             iteration += 1
             #print("***************************************iteration: ", iteration, "**************************************************************")
             random_node = random_sample(clearance=.6, radius=10) # create random sample
             #print("tree: ", tree)
             neighbors = find_closest_neighbors(tree, random_node, metric_function=diagonal_dist) # find closest neighbor of that sample
-            x_new = steer(random_node, neighbors, ul, ur, diagonal_dist) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
+            x_new = steer(random_node, neighbors, ul, ur, goal_node, diagonal_dist) # generate child nodes from closest neighbor, x_new is the child node closest to the sample
 
-            if obstacle_checker(x_new, clearance=5, radius = 5) == False:
+            if obstacle_checker(x_new, clearance, radius = 5) == False:
                 # if x_new is not in the obstacle space then...
                 closer_neighbors = near(tree, x_new, diagonal_dist) # find all neighbors of x_new within a defined threshold
                 z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur, diagonal_dist) # pick the node who can reach x_new using 1 of the 8 action sets
                 tree = insert_node(tree, z_min, x_new, diagonal_dist) # insert z_min as the parent, and x_new as the child, into the tree
                 #print("x_new: ", x_new)
                 rpms = (0, 0, 0, x_new[3], x_new[4])
-                plt.plot([z_min[0]], [z_min[1]], 'x', label = 'child')
-                plt.plot([x_new[0]], [x_new[1]], '+', label = 'parent')
+                plt.plot([z_min[0]], [z_min[1]], ',', label = 'child')
+                plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
                 if manhattan_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
@@ -766,7 +786,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                     time_taken = time_end - time_start
 
                     goal = list(tree.values())[-1]
-                    print("goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
+                    print(" goal node:", goal, "reached in", iteration, "iterations which took", time_taken, "seconds, has a cost of", goal[0][5])
                     path_list = pathtrace(goal, tree, start_node)
                     path_list[-1] = tuple(path_list[-1][0])
 
@@ -788,7 +808,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
             #     print("x_new: ", x_new, "is in obstacle space, not inserting!")
 
             plt.draw() # redraw the plot with the new random node
-            plt.pause(.0000000000000001)
+            # plt.pause(.0000000000000001)
 
     plt.ioff()
     plt.show()
@@ -1005,18 +1025,18 @@ def prompt():
 
     if option == 1:
         startNode = (30, 30, 45, 0, 0, 0)
-        goalNode = (80, 80, 45, 0, 0, 0)
-        print(" Using start node:", startNode, "and goal node:", goalNode, "with 2000 samples, RPM1 = 25, RPM2 = 30 and a clearance of 0")
+        goalNode = (500, 100, 45, 0, 0, 0)
+        print(" Using start node:", startNode, "and goal node:", goalNode, "with 2000 samples, RPM1 = 25, RPM2 = 30 and a clearance of 5")
         
         metric_function = -1
         while not (1 <= metric_function <= 3):       
             metric_function = int(input("\n This program has 3 available metric functions\n Enter 1 for euclidean, 2 for manhattan, 3 for diagonal: "))
             if metric_function == 1:
-                tree = rrt(startNode, 0, 2000, 25, 30, goalNode, euclidean_dist) # using manhattan distance
+                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, euclidean_dist) # using manhattan distance
             if metric_function == 2:
-                tree = rrt(startNode, 0, 2000, 25, 30, goalNode, manhattan_dist) # using euclidean distance
+                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, manhattan_dist) # using euclidean distance
             if metric_function == 3:
-                tree = rrt(startNode, 0, 2000, 25, 30, goalNode, diagonal_dist) # using euclidean distance
+                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, diagonal_dist) # using euclidean distance
 
     if option == 2:
         goal_positions = []
@@ -1028,7 +1048,7 @@ def prompt():
         start_positions = (400, 100, 0, 0, 0, 0)
         while obstacle_checker(start_positions, clearance, .105) == True:
             start_positions = []
-            print("\n Please enter values for Start Position [x y theta], e.g [15 15 30]:")
+            print("\n Please enter values for Start Position x, y, theta one by one:")
             for i in range(3):
 
                 start_positions.append(int(input(" ")))
@@ -1037,12 +1057,12 @@ def prompt():
         goal_positions = (400, 100, 0, 0, 0, 0) # initialize goal_positions so we enter the loop
         while obstacle_checker(goal_positions, clearance, .105) == True:
             goal_positions = []
-            print(" Please enter values for the Goal Position [x y theta], e.g [350, 100, 0]:")
+            print(" Please enter values for the Goal Position x and y one by one:")
             for i in range(3):
                 goal_positions.append(int(input(" ")))
             goal_positions = tuple(goal_positions) + (0, 0, 0)
-        print("goal_positions: ", goal_positions, "is of type: ", type(goal_positions))
-        print("start_positions: ", start_positions, "is of type: ", type(start_positions))
+        # print("goal_positions: ", goal_positions, "is of type: ", type(goal_positions))
+        # print("start_positions: ", start_positions, "is of type: ", type(start_positions))
 
 
         rpmLeft = -1
@@ -1069,8 +1089,6 @@ plt.close('all')
 
 prompt()
 
-startNode = (30, 30, 45, 0, 0, 0)
-goalNode = (350, 100, 45, 0, 0, 0)
 # goalNode = (60, 60, 45, 0, 0, 0)
 
 # print("euclidean dist: ", euclidean_dist(startNode[0], startNode[1], goalNode[0], goalNode[1]))
