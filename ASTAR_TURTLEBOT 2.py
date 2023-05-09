@@ -643,6 +643,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
     iteration = 0
     #print("using ", N, "samples")
     walls = Rectangle((0, 0), 600, 200, fill=False, edgecolor='black')
+    goal_circle = Circle((goal_node[0], goal_node[1]), radius= 15/2, fill='lightgreen', edgecolor='lightgreen')
     circle = Circle((400, 110), radius=50, fc='r', ec='b')
     circle_clearance = Circle((400, 110), radius=50 + clearance, fc='y', ec='y')
     rectangle1 = Rectangle((150, 75), width=15, height=125, fc='r', ec='b')
@@ -650,6 +651,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
     rectangle2 = Rectangle((250, 0), width=15, height=125, fc='r', ec='b')
     rectangle2_clearance = Rectangle((250 - clearance/2, 0 - clearance/2), width=15 + clearance, height=125 + clearance, fc='y', ec='y')
     plt.gca().add_patch(walls)
+    plt.gca().add_patch(goal_circle)
     plt.gca().add_patch(rectangle1_clearance)
     plt.gca().add_patch(rectangle2_clearance)
     plt.gca().add_patch(circle_clearance)
