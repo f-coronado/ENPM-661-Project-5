@@ -643,7 +643,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
     iteration = 0
     #print("using ", N, "samples")
     walls = Rectangle((0, 0), 600, 200, fill=False, edgecolor='black')
-    goal_circle = Circle((goal_node[0], goal_node[1]), radius= 15/2, fill='lightgreen', edgecolor='lightgreen')
+    goal_circle = Circle((goal_node[0], goal_node[1]), radius= 10, fill='lightgreen', edgecolor='lightgreen')
     circle = Circle((400, 110), radius=50, fc='r', ec='b')
     circle_clearance = Circle((400, 110), radius=50 + clearance, fc='y', ec='y')
     rectangle1 = Rectangle((150, 75), width=15, height=125, fc='r', ec='b')
@@ -687,7 +687,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                 plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
-                if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
+                if euclidean_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 10:
                     # print("tree: ", tree)
                     time_end = time.time()
                     time_taken = time_end - time_start
@@ -735,7 +735,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                 plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
-                if manhattan_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
+                if manhattan_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 10:
                     # print("tree: ", tree)
                     time_end = time.time()
                     time_taken = time_end - time_start
@@ -782,7 +782,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
                 plt.plot([x_new[0]], [x_new[1]], ',', label = 'parent')
                 Curved_Line_Robot(z_min, rpms, "blue")
                 
-                if manhattan_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 15:
+                if diagonal_dist(x_new[0], x_new[1], goal_node[0], goal_node[1]) <= 10:
                     # print("tree: ", tree)
                     time_end = time.time()
                     time_taken = time_end - time_start
@@ -1028,17 +1028,22 @@ def prompt():
     if option == 1:
         startNode = (30, 30, 45, 0, 0, 0)
         goalNode = (500, 100, 45, 0, 0, 0)
-        print(" Using start node:", startNode, "and goal node:", goalNode, "with 2000 samples, RPM1 = 25, RPM2 = 30 and a clearance of 5")
+        samples = 2000
+        rpm1 = 25
+        rpm2 = 30 
+        clearance = 5
+
+        print(" Using start node:", startNode, "and goal node:", goalNode, "with", samples, "samples, RPM1 =", rpm1, ", RPM2 =", rpm2, "and a clearance of:", clearance)
         
         metric_function = -1
         while not (1 <= metric_function <= 3):       
             metric_function = int(input("\n This program has 3 available metric functions\n Enter 1 for euclidean, 2 for manhattan, 3 for diagonal: "))
             if metric_function == 1:
-                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, euclidean_dist) # using manhattan distance
+                tree = rrt(startNode, clearance, samples, rpm1, rpm2, goalNode, euclidean_dist) # using manhattan distance
             if metric_function == 2:
-                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, manhattan_dist) # using euclidean distance
+                tree = rrt(startNode, clearance, samples, rpm1, rpm2, goalNode, manhattan_dist) # using euclidean distance
             if metric_function == 3:
-                tree = rrt(startNode, 5, 2000, 25, 30, goalNode, diagonal_dist) # using euclidean distance
+                tree = rrt(startNode, clearance, samples, rpm1, rpm2, goalNode, diagonal_dist) # using euclidean distance
 
     if option == 2:
         goal_positions = []
