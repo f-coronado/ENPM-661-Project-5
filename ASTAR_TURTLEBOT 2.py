@@ -262,7 +262,7 @@ def Nodes_per_Action(node, lwheel,rwheel): # used in conjunction with robot_traj
     RPM1 = lwheel
     RPM2 = rwheel
     
-    actions = [[RPM1,RPM1],
+    actions = [ [RPM1,RPM1],
                 [RPM2,RPM2],
                 [RPM1,RPM2],
                 [RPM2,RPM1]]
@@ -468,6 +468,7 @@ def find_closest_neighbors(tree, sample, metric_function=euclidean_dist):
 def steer(sample, neighbors, ul, ur, goal_node, metric_function=euclidean_dist):
     # neighbors should be from find_closest_neighbors
     # print("\n*******steer*******")
+    # print("neighbor?: ", neighbors)
 
     new_node_dict = {}
     # neighbors_and_children = {}
@@ -483,31 +484,25 @@ def steer(sample, neighbors, ul, ur, goal_node, metric_function=euclidean_dist):
             x_n, y_n, theta_n, rpmLeft, rpmRight, curvature = child
             if metric_function == euclidean_dist:
                 distance2sample = euclidean_dist(sample[0], sample[1], x_n, y_n)
-                distance2goal = euclidean_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                distance2goal = euclidean_dist(x_n, y_n, goal_node[0], goal_node[1])
                 total_cost = distance2goal + distance2sample
             elif metric_function == manhattan_dist:
                 distance2sample = manhattan_dist(sample[0], sample[1], x_n, y_n)
-                distance2goal = manhattan_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                distance2goal = manhattan_dist(x_n, y_n, goal_node[0], goal_node[1])
                 total_cost = distance2goal + distance2sample
             elif metric_function == diagonal_dist:
                 distance2sample = diagonal_dist(sample[0], sample[1], x_n, y_n)
-                distance2goal = manhattan_dist(sample[0], sample[1], goal_node[0], goal_node[1])
+                distance2goal = diagonal_dist(x_n, y_n, goal_node[0], goal_node[1])
                 total_cost = distance2goal + distance2sample
             new_node_dict[(x_n, y_n, theta_n, rpmLeft, rpmRight)] = (round(distance2sample, 2), round(distance2goal, 2), round(total_cost, 2), neighbor)
     # the keys in this dictionary are the children created from all the neighbor nodes, their value is the euclidean distance from the sample
-    # print("neighbors_and_children: ", neighbors_and_children)
-    # print("nodes generated from neighbor: ", new_node_dict)
 
-    # x_new = min(new_node_dict.items(), key = lambda x: x[1])
-    # #print("x_new: ", x_new)
-    x_new = min(new_node_dict, key = new_node_dict.get) # retrieve the child with the lowest total cost
+    x_new = min(new_node_dict.items(), key = lambda x: x[1][2])[0] # retrieve the child with the lowest total cost
+    # print("new_node_dict: ", new_node_dict)
     # print("x_new: ", x_new)
     x_new_value = new_node_dict[x_new]
-    # print("x_new_value: ", x_new_value)
     tree_node = x_new_value[1]
     x_new = ((x_new[0]), x_new[1], x_new[2], x_new[3], x_new[4])
-    #print("x_new after int(): ", x_new)
-    #print("tree_node: ", tree_node)
 
     # find action set taken from tree_node to sample
     RPM1 = ul
@@ -679,7 +674,7 @@ def rrt(start_node, clearance, N, ul, ur, goal_node, metric_function=euclidean_d
             if obstacle_checker(x_new, clearance, radius = 5) == False:
                 # if x_new is not in the obstacle space then...
                 closer_neighbors = near(tree, x_new) # find all neighbors of x_new within a defined threshold
-                z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur) # pick the node who can reach x_new using 1 of the 8 action sets
+                z_min = choose_parent(x_new, closer_neighbors, goal_node, ul, ur) # pick the node who can reach x_new using 1 of the 4 action sets
                 tree = insert_node(tree, z_min, x_new) # insert z_min as the parent, and x_new as the child, into the tree
                 #print("x_new: ", x_new)
                 rpms = (0, 0, 0, x_new[3], x_new[4])
@@ -854,25 +849,6 @@ def pathtrace(goal, tree, start_node):
     return path[::-1]
 
 
-def backtrack(visited_nodes):
-
-    goal_node = list(visited_nodes.keys())[-1] # get the last key in the dictionary bc its the goal node
-    parent_node = visited_nodes[goal_node] # get the value of the last key, this is the last keys parent node
-    path = [goal_node]
-
-    while parent_node is not None: # backtrack using the parent nodes until value = none which means we're at the starting node
-        path.append(parent_node) # add the node to the path each iteration
-        parent_node = visited_nodes[parent_node] # update the parent node
-
-    path.reverse()
-
-    x_coords = [node[0] for node in path]
-    y_coords = [node[1] for node in path]
-    # #print("x_coords: ", x_coords)
-    # #print("y_coords: ", y_coords)
-
-    return x_coords, y_coords
-
 def Curved_Line_Robot(nodePar, nodeCh, linecolor, linewidth=0.6):
     
     t = 0 
@@ -913,110 +889,6 @@ def Curved_Line_Robot(nodePar, nodeCh, linecolor, linewidth=0.6):
         
     return xn, yn, theta_deg
 
-def bufImage(): # convert a matplotlib figure to an opencv object
-    Obs_space.fig.canvas.draw() # 
-    mapImg = np.frombuffer(Obs_space.fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(Obs_space.fig.canvas.get_width_height()[::-1] + (3,))
-    mapImg = cv2.cvtColor(mapImg,cv2.COLOR_RGB2BGR)
-    return mapImg
-
-def Simulated_BotShow(nodes, xCoords, yCoords):
-    
-    #print(" The Simulation has Started")
-    # #print(" nodes: ", nodes)
-    
-    for node in nodes:
-        
-        Curved_Line_Robot(node[0], node[1], "orange")
-        mapImg = bufImage()
-
-
-        if cv2.waitKey(1) == ord('q'):
-            
-            exit()
-        cv2.imshow('Robot - A Star', mapImg)
-
-    plt.plot(xCoords, yCoords, c='blue', marker = '.')
-    mapImg = bufImage()
-    cv2.imshow('Robot - A Star', mapImg)
-
-def polynomial(x, *coeffs):
-    y = []
-    for xx in x:
-        y.append(sum([coeffs[i] * xx**i for i in range(len(coeffs))]))
-    return y
-
-def steering(x_data, y_data, current_node, near_node):
-    
-    angle_radians = np.radians(current_node[1])
-    # create a horizontal line at the given angle to be able to flip x_data and y_data over this line
-    # this flipped data will be used to create a lower bound to check if the current_node is above it
-    slope = np.tan(angle_radians)
-    y_int = y_data[0] - slope * x_data[0]
-    x_line = np.linspace(np.min(x_data), np.max(x_data), len(x_data))
-    y_line = slope * x_line + y_int
-
-    x_data_flipped = (x_data + (y_data - 2*y_line) / (slope**2 + 1))
-    # y_data_flipped = (y_line + slope*(x_data + (y_data - 2*y_line) / (slope**2 + 1)))
-    y_data_flipped = (2*y_line - y_data)
-    plt.plot(x_data, y_data, 'o', label = 'Original Data')
-    plt.plot(x_data, y_data_flipped, 'x', label = "flipped data")
-    plt.plot(x_line, y_line, label = 'line at the angle')
-    plt.legend()
-    plt.show()
-    
-    p0 = [1, 1, 1] # used provide initial guess for parameters
-    coeffs, _ = curve_fit(polynomial, x_data, y_data, p0)
-    flipped_coeffs, _ = curve_fit(polynomial, x_data, y_data_flipped, p0)
-    #print("coeffs: ", coeffs, "\nequation is: ", coeffs[0], coeffs[1], "x +", coeffs[2], "x**2" )
-    #print("flipped_coeffs: ", flipped_coeffs, "\nequation is: ", flipped_coeffs[0], flipped_coeffs[1], "x +", flipped_coeffs[2], "x**2" )
-
-    # the following checks if near_node is within the workspace of the mobile robot, we have to check this bc its a differential drive
-    # if y <= c1 + c2x + c3x^2 and x_data[0] <= x <= x_data[-1]
-    if current_node[1] <= coeffs[0] + coeffs[1] * current_node[0] + coeffs[2] * current_node[0] ** 2 \
-        and current_node [1] >= flipped_coeffs[0] + flipped_coeffs[1] * current_node[0] + flipped_coeffs[2] * current_node[0]**2 \
-        and current_node[0] >= x_data[0] and current_node[0] <= x_data[-1]:
-        #print("\ncurrentNode", current_node, "is in bounds")
-        return False
-    else:
-        #print("currentNode", current_node, "is out of bounds")
-        return True
-
-def user_goals():
-    
-    start_positions = []
-    goal_positions = []
-
-    if int(input(" enter 1 for predefined, 2 to define yourself : ")) == 1:
-        start_positions = [5.0, 5.0, 45.0]
-        goal_positions = [20.0, 20.0, 45.0]
-        speed1 = 35
-        speed2 = 30
-        Robot_Radius = 8.0
-        Map_C = 0.6
-        #print(" Start Position : ", start_positions, "\n Goal Position : ", goal_positions)
-        #print(" RPM1 : ", speed1, "RPM2 : ", speed2)
-        #print(" Robot Radius : ", Robot_Radius, "Obstacle Clearance : ", Map_C)
-
-    
-    else: 
-        print(" Please enter values for Start Position [x y theta], e.g [5 5 30]")
-        
-        for i in range(3):
-            
-            start_positions.append(float(input(" ")))
-        print("start_positions: ", start_positions, "type(start_positions): ", type(start_positions))
-        print(" Initial Start is: ", start_positions)
-        print("\n Please enter values for Goal Position [x y theta, e.g [7 8 60]")
-        
-        for i in range(3):
-            goal_positions.append(float(input(" ")))
-        speed1 = float(input(" Please enter values for RPM1 (value: 5 to 15) : "))
-        speed2 = float(input(" Please enter values for RPM2 (value: 15 to 30) : "))
-        Robot_Radius = float(input(" Please input the Robot radius (e.g. 10): "))
-        Map_C = float(input(" Please input the Obstacle Clearance (e.g. 0.1 - 0.8): "))
-    
-    return start_positions, goal_positions, speed1, speed2, Robot_Radius, Map_C
-
 
 def prompt():
 
@@ -1028,7 +900,7 @@ def prompt():
     if option == 1:
         startNode = (30, 30, 45, 0, 0, 0)
         goalNode = (500, 100, 45, 0, 0, 0)
-        samples = 2000
+        samples = 7000
         rpm1 = 25
         rpm2 = 30 
         clearance = 5

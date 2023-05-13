@@ -1,0 +1,1 @@
+To simulate the RRT* algorithm download ASTAR_TURTLEBOT 2.py and run it in your desired application. When running the algorithm it will prompt you to use predefined start and goal nodes or choose your own. If you want to see the sampling being done while the algorithm is running uncomment line 702-euclidean, 749-manhattan, 800-diagonal then run the program. 
